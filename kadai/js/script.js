@@ -4,9 +4,6 @@ $("#menu-toggle").on("click", function () {
   $("#main-content").toggleClass("translate-x-48"); // ←ここでスライド！
 });
 
-
-
-
 // ページ切り替え
 $(".menu-btn").on("click", function () {
   const target = $(this).data("target");
@@ -47,4 +44,3 @@ function renderList() {
 $(function () {
   renderList();
 });
-
