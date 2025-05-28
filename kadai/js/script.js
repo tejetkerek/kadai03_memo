@@ -1,46 +1,80 @@
-// メニューの表示・非表示切替（プッシュ型）
-$("#menu-toggle").on("click", function () {
-  $("#side-menu").toggleClass("-translate-x-full");
-  $("#main-content").toggleClass("translate-x-48"); // ←ここでスライド！
-});
+$(document).ready(function () {
+  let materials = JSON.parse(localStorage.getItem("materials")) || [];
 
-// ページ切り替え
-$(".menu-btn").on("click", function () {
-  const target = $(this).data("target");
-  $(".screen").addClass("hidden");
-  $("#" + target).removeClass("hidden");
-});
+  // メニュー切り替え
+  $(".menu-btn").on("click", function () {
+    const target = $(this).data("target");
+    $("section").addClass("hidden");
+    $("#" + target).removeClass("hidden");
+    if (target === "list") renderList();
+  });
 
-// セーブ機能
-$("#save").on("click", function () {
-  const key = $("#title").val();
-  const value = $("#text").val();
-  if (!key || !value) return;
+  // 登録ボタン
+  $("#saveBtn").on("click", function () {
+    const name = $("#name").val();
+    const amount = $("#amount").val();
+    const price = $("#price").val();
 
-  localStorage.setItem(key, value);
-  renderList();
-  $("#title").val("");
-  $("#text").val("");
-});
+    if (!name || !amount || !price) {
+      alert("すべての項目を入力してください");
+      return;
+    }
 
-// 全削除
-$("#clear").on("click", function () {
-  localStorage.clear();
-  renderList();
-});
+    const item = { name, amount, price };
+    materials.push(item);
+    localStorage.setItem("materials", JSON.stringify(materials));
 
-// 一覧表示処理
-function renderList() {
-  $("#memoList").empty();
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    const value = localStorage.getItem(key);
-    const item = `<li class="bg-white p-2 shadow border rounded"><strong>${key}</strong><br>${value}</li>`;
-    $("#memoList").append(item);
+    $("#name, #amount, #price").val("");
+    alert("登録しました！");
+  });
+
+  // 一覧描画
+  function renderList() {
+    const filter = $("#filter").val()?.toLowerCase() || "";
+    const list = $("#materialList").empty();
+
+    materials
+      .filter(m => m.name.toLowerCase().includes(filter))
+      .forEach(m => {
+        const html = `
+          <div class="bg-white p-2 mb-2 shadow rounded">
+            <strong>${m.name}</strong> - ${m.amount}g / ¥${m.price}
+          </div>`;
+        list.append(html);
+      });
   }
-}
 
-// 初期化時に表示
-$(function () {
-  renderList();
+  $("#filter").on("input", renderList);
+
+  // OCR画像プレビュー
+  $("#ocr-image").on("change", function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (ev) {
+      console.log("画像読み込み成功");
+      $("#ocr-preview").attr("src", ev.target.result);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // OCRテキスト → 材料リストに変換
+  $("#ocr-add-btn").on("click", function () {
+    const rawText = $("#ocr-text").val();
+    if (!rawText.trim()) return alert("テキストを入力してください");
+
+    const lines = rawText.split("\n");
+    lines.forEach(line => {
+      const parts = line.trim().split(/\s+/); // 空白区切り
+      if (parts.length >= 3) {
+        const [name, amount, price] = parts;
+        const item = { name, amount, price };
+        materials.push(item);
+      }
+    });
+
+    localStorage.setItem("materials", JSON.stringify(materials));
+    $("#ocr-text").val("");
+    alert("材料を登録しました！");
+  });
 });

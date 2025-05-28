@@ -1,81 +1,99 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <title>myMemoPad</title>
-    <link rel="stylesheet" href="css/reset.css" />
-    <link rel="stylesheet" href="css/style.css" />
+    <title>かんたん献立提案アプリ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+      .hidden {
+        display: none;
+      }
+    </style>
   </head>
+  <body class="bg-gray-100">
+    <header class="bg-green-700 text-white text-center py-4 shadow-md">
+  <h1 class="text-2xl font-bold tracking-wide">うちめしAI</h1>
+</header>
 
-  <body>
-    <h1>Memo Pad</h1>
+    <!-- メニュー -->
+    <nav class="flex gap-2 p-4 bg-green-600 text-white">
+      <button class="menu-btn" data-target="ocr">📷 OCRごっこ</button>
+      <button class="menu-btn" data-target="register">📝 材料登録</button>
+      <button class="menu-btn" data-target="list">📋 材料一覧</button>
+      <button class="menu-btn" data-target="menu">🍽️ 献立提案</button>
+    </nav>
 
-    <main>
-      
-<div id="main-content" class="transition-transform duration-300">
-
-  <main class="p-4">
-
-<!-- ハンバーガーアイコン -->
-<button id="menu-toggle" class="fixed top-4 left-4 z-50 bg-blue-600 text-white p-2 rounded">
-  ☰
-</button>
-
-<!-- サイドメニュー -->
-<div id="side-menu" class="fixed top-0 left-0 w-48 h-full bg-blue-800 text-white transform -translate-x-full transition-transform duration-300 z-40">
-  <nav class="flex flex-col p-4 space-y-4">
-    <button class="menu-btn" data-target="input">入力</button>
-    <button class="menu-btn" data-target="dashboard">ダッシュボード</button>
-    <button class="menu-btn" data-target="list">一覧</button>
-  </nav>
-</div>
-
-
-  <!-- Main Contents -->
-  <main class="p-4">
-
-    <!-- 入力画面 -->
-    <section id="input" class="screen">
-      <h2 class="text-2xl font-bold mb-4">入力画面</h2>
-      <input id="title" type="text" placeholder="タイトルを入力" class="w-full p-2 border mb-2" />
-      <textarea id="text" placeholder="本文を入力" class="w-full p-2 border mb-2"></textarea>
-      <div class="flex gap-2">
-        <button id="save" class="bg-blue-500 text-white px-4 py-2 rounded">セーブ</button>
-        <button id="clear" class="bg-red-500 text-white px-4 py-2 rounded">全て削除</button>
-      </div>
+    <!-- 材料登録 -->
+    <section id="register" class="p-4">
+      <h2 class="text-xl font-bold mb-2">材料を登録</h2>
+      <input
+        id="name"
+        type="text"
+        placeholder="材料名（例：じゃがいも）"
+        class="border p-2 mb-2 w-full"
+      />
+      <input
+        id="amount"
+        type="number"
+        placeholder="量 (g)"
+        class="border p-2 mb-2 w-full"
+      />
+      <input
+        id="price"
+        type="number"
+        placeholder="値段 (円)"
+        class="border p-2 mb-2 w-full"
+      />
+      <button id="saveBtn" class="bg-green-500 text-white px-4 py-2 rounded">
+        登録
+      </button>
     </section>
 
-    <!-- ダッシュボード画面 -->
-    <section id="dashboard" class="screen hidden">
-      <h2 class="text-2xl font-bold mb-4">ダッシュボード</h2>
-      <p>ここに統計やグラフなどを入れられます（仮）</p>
+    <!-- 材料一覧 -->
+    <section id="list" class="p-4 hidden">
+      <h2 class="text-xl font-bold mb-2">材料リスト</h2>
+      <input
+        id="filter"
+        type="text"
+        placeholder="キーワードで絞り込み"
+        class="border p-2 mb-2 w-full"
+      />
+      <div id="materialList"></div>
     </section>
 
-    <!-- 一覧画面 -->
-    <section id="list" class="screen hidden">
-      <h2 class="text-2xl font-bold mb-4">一覧</h2>
-      <ul id="memoList" class="space-y-2">
-        <!-- 保存データが表示される -->
-      </ul>
+    <!-- 献立提案 -->
+    <section id="menu" class="p-4 hidden">
+      <h2 class="text-xl font-bold mb-2">ChatGPTで献立提案</h2>
+      <button id="generateBtn" class="bg-blue-500 text-white px-4 py-2 rounded">
+        献立を提案
+      </button>
+      <div id="menuResult" class="bg-white p-4 mt-4 shadow rounded"></div>
     </section>
 
-   
+    <!-- スクリプト -->
+    <script src="./js/script.js"></script>
 
-</main>
+    <!-- OCRごっこ画面 -->
+    <section id="ocr" class="p-4 hidden">
+      <h2 class="text-xl font-bold mb-2">📷 OCRごっこ</h2>
 
-</div>
+      <input id="ocr-image" type="file" accept="image/*" class="mb-2" />
+      <img id="ocr-preview" class="w-full max-w-xs mb-4 rounded shadow" />
 
-  </main>
+      <textarea
+        id="ocr-text"
+        placeholder="画像から読み取った材料をここに入力（例：じゃがいも 100 98）"
+        class="border p-2 w-full h-32 mb-2"
+      ></textarea>
 
-   <footer>Gs</footer>
-
-
-
-    
-
+      <button
+        id="ocr-add-btn"
+        class="bg-purple-500 text-white px-4 py-2 rounded"
+      >
+        材料として登録する
+      </button>
+    </section>
   </body>
-
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="./js/script.js"></script>
 </html>
