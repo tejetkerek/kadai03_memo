@@ -6,94 +6,157 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./css/style.css">
     <style>
       .hidden {
         display: none;
       }
     </style>
   </head>
-  <body class="bg-gray-100">
-    <header class="bg-green-700 text-white text-center py-4 shadow-md">
-  <h1 class="text-2xl font-bold tracking-wide">うちめしAI</h1>
-</header>
+  <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen font-sans flex flex-col">
+    <header class="bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-wide text-center">うちめしAI</h1>
+      </div>
+    </header>
 
     <!-- メニュー -->
-    <nav class="flex gap-2 p-4 bg-green-600 text-white">
-      <button class="menu-btn" data-target="ocr">📷 OCRごっこ</button>
-      <button class="menu-btn" data-target="register">📝 材料登録</button>
-      <button class="menu-btn" data-target="list">📋 材料一覧</button>
-      <button class="menu-btn" data-target="menu">🍽️ 献立提案</button>
+    <nav class="sticky top-0 bg-white/80 backdrop-blur-md shadow-sm z-50">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <div class="flex flex-wrap gap-2 justify-center">
+          <button class="menu-btn transition-all hover:scale-105" data-target="ocr">
+            <span class="inline-flex items-center px-3 sm:px-4 py-2 rounded-lg bg-purple-500 text-white text-sm sm:text-base shadow-md hover:bg-purple-600">
+              <span class="mr-1 sm:mr-2">📷</span>OCRごっこ
+            </span>
+          </button>
+          <button class="menu-btn transition-all hover:scale-105" data-target="register">
+            <span class="inline-flex items-center px-3 sm:px-4 py-2 rounded-lg bg-blue-500 text-white text-sm sm:text-base shadow-md hover:bg-blue-600">
+              <span class="mr-1 sm:mr-2">📝</span>材料登録
+            </span>
+          </button>
+          <button class="menu-btn transition-all hover:scale-105" data-target="list">
+            <span class="inline-flex items-center px-3 sm:px-4 py-2 rounded-lg bg-green-500 text-white text-sm sm:text-base shadow-md hover:bg-green-600">
+              <span class="mr-1 sm:mr-2">📋</span>材料一覧
+            </span>
+          </button>
+          <button class="menu-btn transition-all hover:scale-105" data-target="menu">
+            <span class="inline-flex items-center px-3 sm:px-4 py-2 rounded-lg bg-orange-500 text-white text-sm sm:text-base shadow-md hover:bg-orange-600">
+              <span class="mr-1 sm:mr-2">🍽️</span>献立提案
+            </span>
+          </button>
+        </div>
+      </div>
     </nav>
 
-    <!-- 材料登録 -->
-    <section id="register" class="p-4">
-      <h2 class="text-xl font-bold mb-2">材料を登録</h2>
-      <input
-        id="name"
-        type="text"
-        placeholder="材料名（例：じゃがいも）"
-        class="border p-2 mb-2 w-full"
-      />
-      <input
-        id="amount"
-        type="number"
-        placeholder="量 (g)"
-        class="border p-2 mb-2 w-full"
-      />
-      <input
-        id="price"
-        type="number"
-        placeholder="値段 (円)"
-        class="border p-2 mb-2 w-full"
-      />
-      <button id="saveBtn" class="bg-green-500 text-white px-4 py-2 rounded">
-        登録
-      </button>
-    </section>
+    <main class="flex-grow">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <!-- 材料登録 -->
+        <section id="register" class="w-full max-w-2xl mx-auto">
+          <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6">
+            <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-800 flex items-center">
+              <span class="mr-2">📝</span>材料を登録
+            </h2>
+            <div class="space-y-4">
+              <div class="input-group">
+                <input
+                  id="name"
+                  type="text"
+                  placeholder="材料名（例：じゃがいも）"
+                  class="form-input"
+                />
+              </div>
+              <div class="input-group">
+                <input
+                  id="amount"
+                  type="number"
+                  placeholder="量 (g)"
+                  class="form-input"
+                />
+              </div>
+              <div class="input-group">
+                <input
+                  id="price"
+                  type="number"
+                  placeholder="値段 (円)"
+                  class="form-input"
+                />
+              </div>
+              <button id="saveBtn" class="btn-primary w-full">
+                登録する
+              </button>
+            </div>
+          </div>
+        </section>
 
-    <!-- 材料一覧 -->
-    <section id="list" class="p-4 hidden">
-      <h2 class="text-xl font-bold mb-2">材料リスト</h2>
-      <input
-        id="filter"
-        type="text"
-        placeholder="キーワードで絞り込み"
-        class="border p-2 mb-2 w-full"
-      />
-      <div id="materialList"></div>
-    </section>
+        <!-- 材料一覧 -->
+        <section id="list" class="w-full max-w-2xl mx-auto hidden">
+          <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6">
+            <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-800 flex items-center">
+              <span class="mr-2">📋</span>材料リスト
+            </h2>
+            <div class="input-group mb-6">
+              <input
+                id="filter"
+                type="text"
+                placeholder="キーワードで絞り込み"
+                class="form-input"
+              />
+            </div>
+            <div id="materialList" class="space-y-3"></div>
+          </div>
+        </section>
 
-    <!-- 献立提案 -->
-    <section id="menu" class="p-4 hidden">
-      <h2 class="text-xl font-bold mb-2">ChatGPTで献立提案</h2>
-      <button id="generateBtn" class="bg-blue-500 text-white px-4 py-2 rounded">
-        献立を提案
-      </button>
-      <div id="menuResult" class="bg-white p-4 mt-4 shadow rounded"></div>
-    </section>
+        <!-- 献立提案 -->
+        <section id="menu" class="w-full max-w-2xl mx-auto hidden">
+          <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6">
+            <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-800 flex items-center">
+              <span class="mr-2">🍽️</span>ChatGPTで献立提案
+            </h2>
+            <button id="generateBtn" class="btn-primary w-full mb-6">
+              献立を提案する
+            </button>
+            <div id="menuResult" class="bg-gray-50 p-4 sm:p-6 rounded-xl"></div>
+          </div>
+        </section>
+
+        <!-- OCRごっこ画面 -->
+        <section id="ocr" class="w-full max-w-2xl mx-auto hidden">
+          <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6">
+            <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-800 flex items-center">
+              <span class="mr-2">📷</span>OCRごっこ
+            </h2>
+            <div class="space-y-4">
+              <div class="input-group">
+                <input 
+                  id="ocr-image" 
+                  type="file" 
+                  accept="image/*" 
+                  class="file-input"
+                />
+              </div>
+              <img id="ocr-preview" class="w-full max-w-xs mx-auto rounded-lg shadow-md hidden" />
+              <textarea
+                id="ocr-text"
+                placeholder="画像から読み取った材料をここに入力（例：じゃがいも 100 98）"
+                class="form-textarea"
+              ></textarea>
+              <button id="ocr-add-btn" class="btn-primary w-full">
+                材料として登録する
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="bg-white/80 backdrop-blur-md py-4 sm:py-6 mt-auto">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm sm:text-base text-gray-600">
+        <p>&copy; 2024 うちめしAI All rights reserved.</p>
+      </div>
+    </footer>
 
     <!-- スクリプト -->
     <script src="./js/script.js"></script>
-
-    <!-- OCRごっこ画面 -->
-    <section id="ocr" class="p-4 hidden">
-      <h2 class="text-xl font-bold mb-2">📷 OCRごっこ</h2>
-
-      <input id="ocr-image" type="file" accept="image/*" class="mb-2" />
-      <img id="ocr-preview" class="w-full max-w-xs mb-4 rounded shadow" />
-
-      <textarea
-        id="ocr-text"
-        placeholder="画像から読み取った材料をここに入力（例：じゃがいも 100 98）"
-        class="border p-2 w-full h-32 mb-2"
-      ></textarea>
-
-      <button
-        id="ocr-add-btn"
-        class="bg-purple-500 text-white px-4 py-2 rounded"
-      >
-        材料として登録する
-      </button>
-    </section>
   </body>
 </html>
