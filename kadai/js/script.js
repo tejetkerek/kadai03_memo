@@ -1,38 +1,112 @@
 $(document).ready(function () {
   let materials = JSON.parse(localStorage.getItem("materials")) || [];
+  let isFirstClick = true;  // 初回クリックフラグ
+
+  // ロゴクリックでリフレッシュ
+  $('#refresh-logo').on('click', function() {
+    // 全てのセクションを非表示
+    $('section').addClass('hidden');
+    // ローディング画面を表示
+    showLoading();
+    // isFirstClickフラグをリセット
+    isFirstClick = true;
+  });
+
+  // ローディング画面の制御
+  const loadingScreen = $('#loading-screen');
+  const loadingTicker = $('.loading-ticker');
+
+  function showLoading() {
+    loadingScreen.removeClass('hidden');
+  }
+
+  function hideLoading() {
+    loadingScreen.addClass('hidden');
+  }
+
+  // ティッカーに画像を追加
+  function initializeLoadingTicker() {
+    const images = Array.from({length: 10}, (_, i) => `/img/kondate${i + 1}.jpg`);
+    // 2周分の画像を追加（スムーズなループのため）
+    [...images, ...images].forEach(src => {
+      loadingTicker.append(`<img src="${src}" alt="献立画像" class="loading-ticker-item" onerror="this.src='/img/kondate1.jpg'">`);
+    });
+  }
+
+  // 初期化時にティッカーを設定
+  initializeLoadingTicker();
+
+  // ページ読み込み時のローディング表示（最初はずっと表示）
+  showLoading();
+  // 初期表示でダッシュボードを隠す
+  $('#dashboard').addClass('hidden');
 
   // サイドメニューの制御
   const menuTrigger = $('#menu-trigger');
+  const menuTriggerIcon = $('#menu-trigger svg');
   const sideMenu = $('#side-menu');
   const menuOverlay = $('#menu-overlay');
+  const mainWrapper = $('#main-wrapper');
+  let isMenuOpen = false;
+
+  function toggleMenu() {
+    isMenuOpen = !isMenuOpen;
+    if (isMenuOpen) {
+      openMenu();
+    } else {
+      closeMenu();
+    }
+  }
 
   function openMenu() {
     sideMenu.removeClass('translate-x-full');
     menuOverlay.removeClass('opacity-0 pointer-events-none').addClass('opacity-50');
+    mainWrapper.addClass('-translate-x-32');
+    menuTrigger.addClass('-rotate-180');
     $('body').addClass('overflow-hidden');
   }
 
   function closeMenu() {
     sideMenu.addClass('translate-x-full');
     menuOverlay.addClass('opacity-0 pointer-events-none').removeClass('opacity-50');
+    mainWrapper.removeClass('-translate-x-32');
+    menuTrigger.removeClass('-rotate-180');
     $('body').removeClass('overflow-hidden');
   }
 
-  menuTrigger.on('click', openMenu);
+  menuTrigger.on('click', toggleMenu);
   menuOverlay.on('click', closeMenu);
 
   // メニュー項目クリック時の処理
   $('.menu-item').on('click', function(e) {
     e.preventDefault();
     const target = $(this).data('target');
-    $('section').addClass('hidden');
-    $('#' + target).removeClass('hidden').addClass('fade-in');
-    if (target === 'list') {
-      renderList();
-    } else if (target === 'dashboard') {
-      initializeDashboard();
+    
+    if (isFirstClick) {
+      // 初回クリック時は即座に切り替え
+      isFirstClick = false;
+      hideLoading();
+      $('section').addClass('hidden');
+      $('#' + target).removeClass('hidden').addClass('fade-in');
+      if (target === 'list') {
+        renderList();
+      } else if (target === 'dashboard') {
+        initializeDashboard();
+      }
+    } else {
+      // 2回目以降は通常のローディング表示
+      showLoading();
+      setTimeout(() => {
+        $('section').addClass('hidden');
+        $('#' + target).removeClass('hidden').addClass('fade-in');
+        if (target === 'list') {
+          renderList();
+        } else if (target === 'dashboard') {
+          initializeDashboard();
+        }
+        hideLoading();
+      }, 1000);
     }
-    closeMenu();
   });
 
   // 材料登録行のテンプレート（2段組、削除ボタン付き）
