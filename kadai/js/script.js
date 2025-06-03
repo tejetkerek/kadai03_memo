@@ -6,8 +6,8 @@ $(document).ready(function () {
   $('#refresh-logo').on('click', function() {
     // 全てのセクションを非表示
     $('section').addClass('hidden');
-    // ローディング画面を表示
-    showLoading();
+    // ローディング画面を表示（リフレッシュモード）
+    showLoading(true);
     // isFirstClickフラグをリセット
     isFirstClick = true;
   });
@@ -16,12 +16,17 @@ $(document).ready(function () {
   const loadingScreen = $('#loading-screen');
   const loadingTicker = $('.loading-ticker');
 
-  function showLoading() {
+  function showLoading(isRefresh = false) {
     loadingScreen.removeClass('hidden');
+    if (isRefresh || isFirstClick) {
+      loadingScreen.addClass('is-refresh');
+    } else {
+      loadingScreen.removeClass('is-refresh');
+    }
   }
 
   function hideLoading() {
-    loadingScreen.addClass('hidden');
+    loadingScreen.addClass('hidden').removeClass('is-refresh');
   }
 
   // ティッカーに画像を追加
@@ -36,8 +41,8 @@ $(document).ready(function () {
   // 初期化時にティッカーを設定
   initializeLoadingTicker();
 
-  // ページ読み込み時のローディング表示（最初はずっと表示）
-  showLoading();
+  // ページ読み込み時のローディング表示（最初はずっと表示、リフレッシュモードで）
+  showLoading(true);
   // 初期表示でダッシュボードを隠す
   $('#dashboard').addClass('hidden');
 
@@ -92,10 +97,14 @@ $(document).ready(function () {
         renderList();
       } else if (target === 'dashboard') {
         initializeDashboard();
+      } else if (target === 'inventory') {
+        renderInventory();
+      } else if (target === 'expiry') {
+        renderExpiry();
       }
     } else {
-      // 2回目以降は通常のローディング表示
-      showLoading();
+      // 2回目以降は通常のローディング表示（リフレッシュモードではない）
+      showLoading(false);
       setTimeout(() => {
         $('section').addClass('hidden');
         $('#' + target).removeClass('hidden').addClass('fade-in');
@@ -103,24 +112,32 @@ $(document).ready(function () {
           renderList();
         } else if (target === 'dashboard') {
           initializeDashboard();
+        } else if (target === 'inventory') {
+          renderInventory();
+        } else if (target === 'expiry') {
+          renderExpiry();
         }
         hideLoading();
       }, 1000);
     }
+
+    // メニューを閉じる
+    closeMenu();
   });
 
-  // 材料登録行のテンプレート（2段組、削除ボタン付き）
+  // 材料登録行のテンプレート
   function createRegisterRow() {
     return $(`
-      <div class="register-row bg-emerald-50 rounded-lg p-2 flex flex-col gap-1.5">
+      <div class="register-row bg-indigo-50 rounded-lg p-2 flex flex-col gap-1.5">
         <div class="flex flex-wrap gap-1.5">
           <input type="date" class="form-input w-36 py-1.5" placeholder="日付" />
           <input type="text" placeholder="購入店舗" class="form-input w-28 py-1.5" />
           <input type="text" placeholder="住所" class="form-input flex-1 min-w-[120px] py-1.5" />
         </div>
         <div class="flex flex-wrap gap-1.5 items-end">
-          <input type="text" placeholder="材料名" class="form-input flex-1 min-w-[90px] py-1.5" />
-          <input type="number" placeholder="量(g)" class="form-input w-20 py-1.5" />
+          <div class="flex-1 flex gap-1.5">
+            <input type="text" placeholder="材料名" class="form-input flex-1 min-w-[90px] py-1.5" />
+                      </div>
           <input type="number" placeholder="値段(円)" class="form-input w-24 py-1.5" />
           <button type="button" class="delete-register-row text-red-400 hover:text-red-600 ml-1">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -131,15 +148,24 @@ $(document).ready(function () {
   }
 
   // 材料登録行追加
-  function addRegisterRow() {
+  $('#register-add-row').on('click', function() {
     const row = createRegisterRow();
     $('#register-rows').append(row);
     updateRegisterDeleteButtons();
-  }
+  });
+
+  // 材料登録行削除
+  $(document).on('click', '.delete-register-row', function() {
+    const rows = $('.register-row');
+    if (rows.length > 1) {
+      $(this).closest('.register-row').remove();
+      updateRegisterDeleteButtons();
+    }
+  });
 
   // 材料登録行削除ボタンの有効/無効制御
   function updateRegisterDeleteButtons() {
-    const rows = $('#register-rows .register-row');
+    const rows = $('.register-row');
     if (rows.length <= 1) {
       rows.find('.delete-register-row').prop('disabled', true).addClass('opacity-30 cursor-not-allowed');
     } else {
@@ -150,180 +176,111 @@ $(document).ready(function () {
   // 初期行1つ追加
   if ($('#register-rows').length) {
     $('#register-rows').empty();
-    addRegisterRow();
+    $('#register-add-row').trigger('click');
   }
 
-  // 行追加ボタン
-  $('#register-add-row').on('click', function() {
-    addRegisterRow();
-  });
+  // 材料登録の保存処理
+  $('#saveBtn').on('click', function() {
+    const rows = $('#register-rows .register-row');
+    const newMaterials = [];
 
-  // 行削除ボタン
-  $(document).on('click', '.delete-register-row', function() {
-    if ($('#register-rows .register-row').length > 1) {
-      $(this).closest('.register-row').remove();
-      updateRegisterDeleteButtons();
-    }
-  });
+    rows.each(function() {
+      const inputs = $(this).find('input');
+      const material = {
+        date: inputs.eq(0).val(),
+        shop: inputs.eq(1).val(),
+        address: inputs.eq(2).val(),
+        name: inputs.eq(3).val(),
+        price: inputs.eq(4).val()
+      };
 
-  // saveBtnクリック時、全行を登録
-  $('#saveBtn').on('click', function () {
-    let addedCount = 0;
-    $('#register-rows .register-row').each(function() {
-      const date = $(this).find('input[type="date"]').val();
-      const shop = $(this).find('input[placeholder^="購入店舗"]').val();
-      const address = $(this).find('input[placeholder^="住所"]').val();
-      const name = $(this).find('input[placeholder^="材料名"]').val();
-      const amount = $(this).find('input[placeholder^="量"]').val();
-      const price = $(this).find('input[placeholder^="値段"]').val();
-      if (date && shop && address && name && amount && price) {
-        const item = { name, amount, price, shop, address, date };
-        materials.push(item);
-        addedCount++;
+      // バリデーション
+      if (!material.name) {
+        showNotification('材料名は必須です', 'error');
+        return;
       }
+
+      newMaterials.push(material);
     });
-    localStorage.setItem("materials", JSON.stringify(materials));
-    $('#register-rows').empty();
-    addRegisterRow();
-    showNotification(`${addedCount}件の材料を登録しました！`, "success");
-  });
 
-  // OCR入力行のテンプレート（2段組、プレースホルダー例付き）
-  function createOcrRow() {
-    return $(`
-      <div class="ocr-row bg-emerald-50 rounded-lg p-2 flex flex-col gap-1.5">
-        <div class="flex flex-wrap gap-1.5">
-          <input type="date" class="form-input w-36 ocr-date py-1.5" placeholder="日付" />
-          <input type="text" placeholder="店舗" class="form-input w-28 ocr-shop py-1.5" />
-          <input type="text" placeholder="住所" class="form-input flex-1 min-w-[120px] ocr-address py-1.5" />
-        </div>
-        <div class="flex flex-wrap gap-1.5 items-end">
-          <input type="text" placeholder="材料名" class="form-input flex-1 min-w-[90px] ocr-name py-1.5" />
-          <input type="number" placeholder="量(g)" class="form-input w-20 ocr-amount py-1.5" />
-          <input type="number" placeholder="値段(円)" class="form-input w-24 ocr-price py-1.5" />
-          <button type="button" class="delete-ocr-row text-red-400 hover:text-red-600 ml-1">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-        </div>
-      </div>
-    `);
-  }
+    if (newMaterials.length > 0) {
+      // LocalStorageから既存のデータを取得
+      let materials = JSON.parse(localStorage.getItem('materials')) || [];
+      
+      // 新しいデータを追加
+      materials = materials.concat(newMaterials);
+      
+      // LocalStorageに保存
+      localStorage.setItem('materials', JSON.stringify(materials));
 
-  // OCR行追加
-  function addOcrRow() {
-    const row = createOcrRow();
-    $('#ocr-rows').append(row);
-  }
+      // 入力フォームをクリア
+      rows.each(function() {
+        $(this).find('input').val('');
+      });
 
-  // 初期行1つ追加
-  addOcrRow();
+      showNotification('材料を登録しました', 'success');
 
-  // 行追加ボタン
-  $('#ocr-add-row').on('click', function() {
-    addOcrRow();
-  });
-
-  // 行削除ボタン
-  $(document).on('click', '.delete-ocr-row', function() {
-    $(this).closest('.ocr-row').remove();
-  });
-
-  // フィルター行の表示切り替え
-  $(document).on('click', '.filter-toggle', function() {
-    const filter = $(this).data('filter');
-    $('#filter-row').removeClass('hidden');
-    // すべてのセルを一旦非表示
-    $('#filter-row th').addClass('hidden');
-    // チェック欄と該当カラム、最後の空欄は表示
-    $('#filter-row th:first').removeClass('hidden');
-    $(`#filter-${filter}-cell`).removeClass('hidden');
-    $('#filter-row th:last').removeClass('hidden');
-  });
-  // テーブル外クリックでフィルター行を非表示
-  $(document).on('click', function(e) {
-    if (!$(e.target).closest('thead').length) {
-      $('#filter-row').addClass('hidden');
+      // 材料一覧を更新（表示中の場合）
+      if (!$('#list').hasClass('hidden')) {
+        renderList();
+      }
     }
   });
 
-  // フィルターバッジの描画
-  function renderFilterBadges() {
-    const badgeArea = $('#filter-badges').empty();
+  // 材料リストの表示処理
+  function renderList() {
+    const list = $('#materialList').empty();
+    // LocalStorageからデータを取得
+    const materials = JSON.parse(localStorage.getItem('materials')) || [];
     const filters = [
-      { id: 'filter-date', label: '日付', value: $('#filter-date').val() },
-      { id: 'filter-shop', label: '店舗', value: $('#filter-shop').val() },
-      { id: 'filter-name', label: '材料名', value: $('#filter-name').val() },
-      { id: 'filter-amount-min', label: '量(最小)', value: $('#filter-amount-min').val() },
-      { id: 'filter-amount-max', label: '量(最大)', value: $('#filter-amount-max').val() },
-      { id: 'filter-price-min', label: '値段(最小)', value: $('#filter-price-min').val() },
-      { id: 'filter-price-max', label: '値段(最大)', value: $('#filter-price-max').val() },
+      { id: 'filter-date', value: $('#filter-date').val(), label: '日付' },
+      { id: 'filter-shop', value: $('#filter-shop').val(), label: '店舗' },
+      { id: 'filter-name', value: $('#filter-name').val(), label: '材料名' },
+      { id: 'filter-price-min', value: $('#filter-price-min').val(), label: '価格(最小)' },
+      { id: 'filter-price-max', value: $('#filter-price-max').val(), label: '価格(最大)' }
     ];
+
+    // フィルター適用
+    let filteredMaterials = materials.map((m, idx) => ({ ...m, _index: idx }));
+
     filters.forEach(f => {
       if (f.value) {
-        const badge = $(`
-          <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 px-3 py-1 text-sm font-medium shadow-sm transition mr-1 mb-1">
-            ${f.label}：${f.value}
-            <button type="button" class="ml-2 text-emerald-500 hover:text-white hover:bg-emerald-400 rounded-full w-5 h-5 flex items-center justify-center filter-badge-clear" data-filter="${f.id}">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-          </span>
-        `);
-        badgeArea.append(badge);
+        switch (f.id) {
+          case 'filter-date':
+            filteredMaterials = filteredMaterials.filter(m => m.date === f.value);
+            break;
+          case 'filter-shop':
+            filteredMaterials = filteredMaterials.filter(m => m.shop?.toLowerCase().includes(f.value.toLowerCase()));
+            break;
+          case 'filter-name':
+            filteredMaterials = filteredMaterials.filter(m => m.name?.toLowerCase().includes(f.value.toLowerCase()));
+            break;
+          case 'filter-price-min':
+            filteredMaterials = filteredMaterials.filter(m => parseFloat(m.price) >= parseFloat(f.value));
+            break;
+          case 'filter-price-max':
+            filteredMaterials = filteredMaterials.filter(m => parseFloat(m.price) <= parseFloat(f.value));
+            break;
+        }
       }
     });
-  }
 
-  // バッジの×クリックで該当フィルターをクリア
-  $(document).on('click', '.filter-badge-clear', function(e) {
-    e.stopPropagation();
-    const id = $(this).data('filter');
-    $(`#${id}`).val('');
-    renderList();
-    renderFilterBadges();
-  });
-
-  // 一覧描画
-  function renderList() {
-    renderFilterBadges();
-    // 各フィルター値取得
-    const filterDate = $("#filter-date").val();
-    const filterShop = $("#filter-shop").val()?.toLowerCase() || "";
-    const filterName = $("#filter-name").val()?.toLowerCase() || "";
-    const amountMin = Number($("#filter-amount-min").val());
-    const amountMax = Number($("#filter-amount-max").val());
-    const priceMin = Number($("#filter-price-min").val());
-    const priceMax = Number($("#filter-price-max").val());
-    const list = $("#materialList").empty();
-
-    let filteredMaterials = materials.filter(m => {
-      if (filterDate && m.date !== filterDate) return false;
-      if (filterShop && (!m.shop || !m.shop.toLowerCase().includes(filterShop))) return false;
-      if (filterName && (!m.name || !m.name.toLowerCase().includes(filterName))) return false;
-      if (!isNaN(amountMin) && Number(m.amount) < amountMin) return false;
-      if (!isNaN(amountMax) && Number(m.amount) > amountMax) return false;
-      if (!isNaN(priceMin) && Number(m.price) < priceMin) return false;
-      if (!isNaN(priceMax) && Number(m.price) > priceMax) return false;
-      return true;
-    });
-
-    if (filteredMaterials.length === 0) {
-      list.append(`<tr><td colspan="7" class="text-center py-8 text-gray-400">材料が登録されていません</td></tr>`);
-      return;
-    }
-
+    // リストの描画
     filteredMaterials.forEach((m, idx) => {
+      const isSelected = JSON.parse(localStorage.getItem('selectedMaterials') || '[]').includes(m._index ?? idx);
       const row = $(`
-        <tr class="border-b hover:bg-emerald-50">
+        <tr class="border-b hover:bg-indigo-50 ${isSelected ? 'bg-emerald-50' : ''}">
           <td class="p-2 text-center align-middle">
-            <input type="checkbox" class="material-check" data-index="${m._index ?? idx}" />
+            <input type="checkbox" class="material-check form-checkbox text-emerald-500 rounded w-5 h-5" 
+              data-index="${m._index ?? idx}"
+              ${isSelected ? 'checked' : ''} />
           </td>
           <td class="p-2 align-middle">${m.date || '-'}</td>
           <td class="p-2 align-middle">${m.shop || '-'}</td>
           <td class="p-2 align-middle">${m.name || '-'}</td>
-          <td class="p-2 align-middle">${m.amount || '-'}</td>
           <td class="p-2 align-middle">${m.price ? '¥' + Number(m.price).toLocaleString() : '-'}</td>
           <td class="p-2 text-center align-middle">
-            <button class="delete-btn text-red-400 hover:text-red-600" data-name="${m.name}">
+            <button class="delete-material text-red-400 hover:text-red-600" data-index="${m._index ?? idx}">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
               </svg>
@@ -333,82 +290,122 @@ $(document).ready(function () {
       `);
       list.append(row);
     });
+
+    // フィルターバッジの更新
+    renderFilterBadges();
+
+    // 全選択チェックボックスの制御
+    $('#select-all').on('change', function() {
+      const isChecked = $(this).prop('checked');
+      $('.material-check').prop('checked', isChecked);
+      
+      // 選択状態を保存
+      const selectedIndexes = isChecked ? 
+        $('.material-check').map(function() {
+          return $(this).data('index');
+        }).get() : [];
+      localStorage.setItem('selectedMaterials', JSON.stringify(selectedIndexes));
+      
+      // 選択行のスタイルを更新
+      $('.material-check').each(function() {
+        $(this).closest('tr').toggleClass('bg-emerald-50', isChecked);
+      });
+    });
+
+    // 個別チェックボックスの変更時に全選択の状態を更新
+    $(document).on('change', '.material-check', function() {
+      const allChecked = $('.material-check:checked').length === $('.material-check').length;
+      $('#select-all').prop('checked', allChecked);
+      
+      // 選択状態を保存
+      const selectedIndexes = $('.material-check:checked').map(function() {
+        return $(this).data('index');
+      }).get();
+      localStorage.setItem('selectedMaterials', JSON.stringify(selectedIndexes));
+      
+      // 選択行のスタイルを更新
+      $(this).closest('tr').toggleClass('bg-emerald-50', $(this).prop('checked'));
+    });
+
+    // 選択した材料の一括削除
+    $('#deleteSelectedBtn').on('click', function() {
+      const selectedIndexes = $('.material-check:checked').map(function() {
+        return $(this).data('index');
+      }).get();
+
+      if (selectedIndexes.length === 0) {
+        showNotification('削除する材料を選択してください', 'error');
+        return;
+      }
+
+      // インデックスの大きい順に削除
+      selectedIndexes.sort((a, b) => b - a).forEach(index => {
+        materials.splice(index, 1);
+      });
+
+      // 選択状態をクリア
+      localStorage.removeItem('selectedMaterials');
+
+      localStorage.setItem('materials', JSON.stringify(materials));
+      showNotification('選択した材料を削除しました', 'success');
+      renderList();
+    });
+
+    // 献立提案ボタンのクリックイベント
+    $('#generateBtn').on('click', function() {
+      // 今日の献立セクションに遷移
+      $('section').addClass('hidden');
+      $('#menu').removeClass('hidden').addClass('fade-in');
+      // メニューを閉じる
+      closeMenu();
+    });
   }
 
-  // 各フィルターのイベント
-  $('#filter-date, #filter-shop, #filter-name, #filter-amount-min, #filter-amount-max, #filter-price-min, #filter-price-max').on('input change', renderList);
+  // フィルターバッジの表示処理
+  function renderFilterBadges() {
+    const badgeArea = $('#filter-badges').empty();
+    const filters = [
+      { id: 'filter-date', value: $('#filter-date').val(), label: '日付' },
+      { id: 'filter-shop', value: $('#filter-shop').val(), label: '店舗' },
+      { id: 'filter-name', value: $('#filter-name').val(), label: '材料名' },
+      { id: 'filter-price-min', value: $('#filter-price-min').val(), label: '価格(最小)' },
+      { id: 'filter-price-max', value: $('#filter-price-max').val(), label: '価格(最大)' }
+    ];
 
-  // 献立提案ボタンの材料選択取得例
-  $(document).on('click', '#generateBtn', function() {
-    // チェックされた材料だけ取得
-    const checkedIndexes = [];
-    $('#materialList .material-check:checked').each(function() {
-      checkedIndexes.push(Number($(this).data('index')));
+    filters.forEach(f => {
+      if (f.value) {
+        const badge = $(`
+          <span class="inline-flex items-center rounded-full bg-indigo-100 text-indigo-800 px-3 py-1 text-sm font-medium shadow-sm transition mr-1 mb-1">
+            ${f.label}：${f.value}
+            <button type="button" class="ml-2 text-indigo-500 hover:text-white hover:bg-indigo-400 rounded-full w-5 h-5 flex items-center justify-center filter-badge-clear" data-filter="${f.id}">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </span>
+        `);
+        badgeArea.append(badge);
+      }
     });
-    // 絞り込み後の材料リストから選択されたものだけ抽出
-    let filteredMaterials = materials.filter(m => {
-      if ($('#filter-date').val() && m.date !== $('#filter-date').val()) return false;
-      if ($('#filter-shop').val() && (!m.shop || !m.shop.toLowerCase().includes($('#filter-shop').val().toLowerCase()))) return false;
-      if ($('#filter-name').val() && (!m.name || !m.name.toLowerCase().includes($('#filter-name').val().toLowerCase()))) return false;
-      if (!isNaN(Number($('#filter-amount-min').val())) && Number(m.amount) < Number($('#filter-amount-min').val())) return false;
-      if (!isNaN(Number($('#filter-amount-max').val())) && Number(m.amount) > Number($('#filter-amount-max').val())) return false;
-      if (!isNaN(Number($('#filter-price-min').val())) && Number(m.price) < Number($('#filter-price-min').val())) return false;
-      if (!isNaN(Number($('#filter-price-max').val())) && Number(m.price) > Number($('#filter-price-max').val())) return false;
-      return true;
-    });
-    // チェックされたものだけ
-    const selectedMaterials = filteredMaterials.filter((m, idx) => checkedIndexes.includes(idx));
-    // ここでselectedMaterialsを使って献立提案処理を行う
-    showNotification(`${selectedMaterials.length}件の材料で献立提案（ダミー）`, 'info');
-  });
+  }
 
-  // 材料削除
-  $(document).on("click", ".delete-btn", function() {
-    const name = $(this).data("name");
-    materials = materials.filter(m => m.name !== name);
-    localStorage.setItem("materials", JSON.stringify(materials));
-    showNotification("材料を削除しました", "info");
+  // フィルターバッジのクリア処理
+  $(document).on('click', '.filter-badge-clear', function(e) {
+    e.stopPropagation();
+    const id = $(this).data('filter');
+    $(`#${id}`).val('');
     renderList();
   });
 
-  $("#filter").on("input", renderList);
-
-  // OCR画像プレビュー
-  $("#ocr-image").on("change", function (e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = function (ev) {
-      console.log("画像読み込み成功");
-      $("#ocr-preview")
-        .attr("src", ev.target.result)
-        .removeClass("hidden")
-        .addClass("fade-in");
-    };
-    reader.readAsDataURL(file);
-  });
-
-  // OCR入力欄から材料を登録
-  $('#ocr-add-btn').on('click', function () {
-    let addedCount = 0;
-    $('#ocr-rows .ocr-row').each(function() {
-      const name = $(this).find('.ocr-name').val();
-      const amount = $(this).find('.ocr-amount').val();
-      const price = $(this).find('.ocr-price').val();
-      const shop = $(this).find('.ocr-shop').val();
-      const address = $(this).find('.ocr-address').val();
-      const date = $(this).find('.ocr-date').val();
-      if (name && amount && price && shop && address && date) {
-        const item = { name, amount, price, shop, address, date };
-        materials.push(item);
-        addedCount++;
-      }
-    });
-    localStorage.setItem("materials", JSON.stringify(materials));
-    $('#ocr-rows').empty();
-    addOcrRow();
-    showNotification(`${addedCount}件の材料を登録しました！`, "success");
+  // 材料の削除処理
+  $(document).on('click', '.delete-material', function() {
+    const index = $(this).data('index');
+    // LocalStorageからデータを取得
+    let materials = JSON.parse(localStorage.getItem('materials')) || [];
+    // 指定されたインデックスの材料を削除
+    materials.splice(index, 1);
+    // LocalStorageに保存
+    localStorage.setItem('materials', JSON.stringify(materials));
+    showNotification('材料を削除しました', 'success');
+    renderList();
   });
 
   // 通知表示
@@ -420,7 +417,7 @@ $(document).ready(function () {
     };
 
     const notification = $(`
-      <div class="fixed top-4 right-4 px-6 py-3 rounded-lg text-white ${colors[type]} shadow-lg transform transition-all duration-300 opacity-0 translate-y-[-1rem]">
+      <div class="fixed top-4 right-4 px-6 py-3 rounded-lg text-white ${colors[type]} shadow-lg transform transition-all duration-300 opacity-0 translate-y-[-1rem] z-50">
         ${message}
       </div>
     `).appendTo("body");
@@ -441,69 +438,200 @@ $(document).ready(function () {
     }, 3000);
   }
 
+  // 各フィルターのイベント
+  $('#filter-date, #filter-shop, #filter-name, #filter-price-min, #filter-price-max').on('input change', renderList);
+
+  // 在庫管理の表示処理
+  function renderInventory() {
+    const inventoryList = $('#inventoryList').empty();
+    const inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+
+    inventory.forEach((item, index) => {
+      const row = $(`
+        <tr class="border-b hover:bg-indigo-50">
+          <td class="p-2 align-middle">${item.name}</td>
+          <td class="p-2 align-middle">${item.current}${item.unit}</td>
+          <td class="p-2 align-middle">${item.min}${item.unit}</td>
+          <td class="p-2 align-middle">${item.optimal}${item.unit}</td>
+          <td class="p-2 align-middle">${item.location}</td>
+          <td class="p-2 text-center align-middle">
+            <button class="edit-inventory text-indigo-400 hover:text-indigo-600" data-index="${index}">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+            </button>
+          </td>
+        </tr>
+      `);
+      inventoryList.append(row);
+    });
+  }
+
+  // 賞味期限管理の表示処理
+  function renderExpiry() {
+    const expiryList = $('#expiryList').empty();
+    const expiry = JSON.parse(localStorage.getItem('expiry')) || [];
+
+    expiry.forEach((item, index) => {
+      const expiryDate = new Date(item.expiryDate);
+      const today = new Date();
+      const daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+      
+      let status, statusClass;
+      if (daysLeft < 0) {
+        status = '期限切れ';
+        statusClass = 'text-red-600';
+      } else if (daysLeft <= 7) {
+        status = '要注意';
+        statusClass = 'text-yellow-600';
+      } else {
+        status = '良好';
+        statusClass = 'text-green-600';
+      }
+
+      const row = $(`
+        <tr class="border-b hover:bg-indigo-50">
+          <td class="p-2 align-middle">${item.name}</td>
+          <td class="p-2 align-middle">${item.expiryDate}</td>
+          <td class="p-2 align-middle ${statusClass}">${daysLeft}日</td>
+          <td class="p-2 align-middle">${item.purchaseDate}</td>
+          <td class="p-2 align-middle ${statusClass}">${status}</td>
+          <td class="p-2 text-center align-middle">
+            <button class="delete-expiry text-red-400 hover:text-red-600" data-index="${index}">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </td>
+        </tr>
+      `);
+      expiryList.append(row);
+    });
+  }
+
   // ダッシュボードの初期化
   function initializeDashboard() {
-    // 1食単価の推移グラフ
     const ctx = document.getElementById('priceChart').getContext('2d');
+    
+    // 固定のダミーデータ（3月の2週間分）
+    const dummyData = [
+      { date: '2024-03-01', avgPrice: 450 },
+      { date: '2024-03-04', avgPrice: 680 },
+      { date: '2024-03-05', avgPrice: 520 },
+      { date: '2024-03-06', avgPrice: 750 },
+      { date: '2024-03-07', avgPrice: 480 },
+      { date: '2024-03-08', avgPrice: 620 },
+      { date: '2024-03-11', avgPrice: 580 },
+      { date: '2024-03-12', avgPrice: 800 },
+      { date: '2024-03-13', avgPrice: 420 },
+      { date: '2024-03-14', avgPrice: 550 },
+      { date: '2024-03-15', avgPrice: 630 }
+    ];
+
     new Chart(ctx, {
       type: 'line',
       data: {
-        labels: ['3/10', '3/11', '3/12', '3/13', '3/14', '3/15'], // 仮データ
+        labels: dummyData.map(d => {
+          const date = new Date(d.date);
+          return `${date.getMonth() + 1}/${date.getDate()}`;
+        }),
         datasets: [{
-          label: '1食単価',
-          data: [850, 920, 780, 830, 940, 880], // 仮データ
-          borderColor: 'rgb(16, 185, 129)',
+          label: '平均価格',
+          data: dummyData.map(d => d.avgPrice),
+          borderColor: 'rgb(16, 185, 129)',  // emerald-500
           backgroundColor: 'rgba(16, 185, 129, 0.1)',
-          tension: 0.4,
-          fill: true
+          tension: 0.3,
+          fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          borderWidth: 2,
+          pointBackgroundColor: 'white',
+          pointBorderColor: 'rgb(16, 185, 129)',
+          pointBorderWidth: 2
         }]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: {
             display: false
           },
           tooltip: {
-            mode: 'index',
-            intersect: false,
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            titleColor: 'rgb(16, 185, 129)',
+            bodyColor: '#333',
+            borderColor: 'rgb(16, 185, 129)',
+            borderWidth: 1,
+            padding: 12,
+            cornerRadius: 8,
+            callbacks: {
+              title: (items) => {
+                const date = new Date(dummyData[items[0].dataIndex].date);
+                return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+              },
+              label: (item) => {
+                return `平均価格: ¥${item.raw.toLocaleString()}`;
+              }
+            }
           }
         },
         scales: {
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              maxRotation: 45,
+              minRotation: 45,
+              font: {
+                size: 11
+              },
+              color: '#666'
+            }
+          },
           y: {
             beginAtZero: true,
+            border: {
+              display: false
+            },
+            grid: {
+              color: 'rgba(0, 0, 0, 0.1)'
+            },
             ticks: {
+              font: {
+                size: 11
+              },
+              color: '#666',
               callback: function(value) {
-                return '¥' + value;
+                return '¥' + value.toLocaleString();
               }
             }
           }
         },
         interaction: {
           intersect: false,
-          mode: 'index',
-        }
-      }
-    });
-
-    // 献立スライダー
-    new Swiper('.menuSwiper', {
-      slidesPerView: 'auto',
-      spaceBetween: 20,
-      loop: true,
-      speed: 400,
-      navigation: {
-        nextEl: '.swiper-button-next',
-        prevEl: '.swiper-button-prev',
-      },
-      breakpoints: {
-        640: {
-          slidesPerView: 2,
+          mode: 'index'
         },
-        1024: {
-          slidesPerView: 3,
+        layout: {
+          padding: {
+            top: 20,
+            right: 20,
+            bottom: 20,
+            left: 20
+          }
         }
       }
     });
   }
+
+  // リセットボタンのクリックイベント
+  $(document).on('click', '#resetDataBtn', function() {
+    if (confirm('本当にすべてのデータをリセットしますか？')) {
+      localStorage.removeItem('materials');
+      localStorage.removeItem('selectedMaterials');
+      showNotification('データをリセットしました', 'success');
+      renderList();
+    }
+  });
 });

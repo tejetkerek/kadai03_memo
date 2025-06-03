@@ -27,7 +27,7 @@
       }
       
       .loading-ticker {
-        animation: ticker 30s linear infinite;
+        animation: ticker 15s linear infinite;
       }
 
       .loading-ticker img {
@@ -39,17 +39,17 @@
 
       @keyframes ticker {
         0% {
-          transform: translateX(100%);
+          transform: translateX(0);
         }
         100% {
-          transform: translateX(-100%);
+          transform: translateX(-200%);
         }
       }
     </style>
   </head>
   <body class="bg-gradient-to-br from-green-50 to-gray-100 min-h-screen font-sans flex flex-col">
     <!-- メニューボタン -->
-    <button id="menu-trigger" class="fixed top-4 right-4 z-50 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-transform duration-300 ease-in-out">
+    <button id="menu-trigger" class="fixed right-4 z-50 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-transform duration-300 ease-in-out" style="top: 0.75rem;">
       <svg class="w-6 h-6 text-gray-600 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
       </svg>
@@ -73,17 +73,19 @@
               <div class="px-3 py-2 text-sm font-medium text-gray-500">材料登録</div>
               <a href="#" class="menu-item block px-6 py-2 rounded-lg hover:bg-emerald-50 text-gray-700 hover:text-emerald-600" data-target="ocr">
                 <span class="inline-flex items-center">
-                  <span class="mr-2">📷</span>OCRごっこ
+                  <span class="mr-2">📷</span>自動取込（OCR風）
                 </span>
               </a>
               <a href="#" class="menu-item block px-6 py-2 rounded-lg hover:bg-emerald-50 text-gray-700 hover:text-emerald-600" data-target="register">
                 <span class="inline-flex items-center">
-                  <span class="mr-2">📝</span>手動材料登録
+                  <span class="mr-2">📝</span>手動登録
                 </span>
               </a>
             </div>
 
-            <!-- 材料一覧 -->
+            <!-- 材料管理 -->
+            <div class="space-y-1">
+              <div class="px-3 py-2 text-sm font-medium text-gray-500">材料管理</div>
             <a href="#" class="menu-item block px-3 py-2 rounded-lg hover:bg-emerald-50 text-gray-700 hover:text-emerald-600" data-target="list">
               <span class="inline-flex items-center">
                 <span class="mr-2">📋</span>材料一覧
@@ -92,17 +94,13 @@
 
             <!-- 献立 -->
             <div class="space-y-1">
-              <div class="px-3 py-2 text-sm font-medium text-gray-500">献立</div>
+              <div class="px-3 py-2 text-sm font-medium text-gray-500">献立管理</div>
               <a href="#" class="menu-item block px-6 py-2 rounded-lg hover:bg-emerald-50 text-gray-700 hover:text-emerald-600" data-target="menu">
                 <span class="inline-flex items-center">
                   <span class="mr-2">🍽️</span>今日の献立
                 </span>
               </a>
-              <a href="#" class="menu-item block px-6 py-2 rounded-lg hover:bg-emerald-50 text-gray-700 hover:text-emerald-600" data-target="suggested">
-                <span class="inline-flex items-center">
-                  <span class="mr-2">🗒️</span>献立一覧
-                </span>
-              </a>
+    
             </div>
           </nav>
         </div>
@@ -116,12 +114,12 @@
     <div id="main-wrapper" class="flex-1 transform transition-transform duration-300 ease-in-out flex flex-col min-h-screen">
       <!-- ヘッダー -->
       <header class="bg-gradient-to-r from-green-700 to-emerald-500 text-white shadow-lg">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <div class="relative w-full px-4 sm:px-6 lg:px-8 py-3">
           <div class="flex items-center">
-            <a href="javascript:void(0)" id="refresh-logo" class="cursor-pointer">
-              <img src="/img/うちめしAI_ロゴ.png" alt="うちめしAI" class="h-12 w-auto mr-4">
+            <a href="javascript:void(0)" id="refresh-logo" class="cursor-pointer absolute left-4">
+              <img src="/img/うちめしAI_ロゴ.png" alt="うちめしAI" class="h-12 w-auto">
             </a>
-            <h1 class="text-2xl sm:text-3xl font-bold tracking-wide text-center m-0 flex-1">うちめしAI</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-wide text-center w-full">うちめしAI</h1>
           </div>
         </div>
       </header>
@@ -131,6 +129,7 @@
         <!-- ローディング画面（mainの中に移動） -->
         <div id="loading-screen" class="absolute inset-0 bg-gradient-to-br from-emerald-50 to-gray-100 z-50">
           <div class="h-full flex items-center justify-center">
+            <div class="loading-spinner"></div>
             <div class="loading-ticker-wrap w-full overflow-hidden">
               <div class="loading-ticker flex">
                 <!-- JavaScriptで動的に画像を追加 -->
@@ -157,27 +156,7 @@
             </div>
           </section>
 
-          <!-- 提案献立一覧 -->
-          <section id="suggested" class="w-full max-w-4xl hidden">
-            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-emerald-100">
-              <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-emerald-700 flex items-center">
-                <span class="mr-2">🗒️</span>提案された献立一覧
-              </h2>
-              <div class="space-y-4">
-                <div class="flex justify-between items-center">
-                  <div class="text-sm text-gray-500">
-                    過去に提案された献立を確認できます
-                  </div>
-                  <button class="btn-primary">
-                    新しい献立を提案
-                  </button>
-                </div>
-                <div id="suggestion-list" class="space-y-4">
-                  <!-- JavaScriptで動的に追加 -->
-                </div>
-              </div>
-            </div>
-          </section>
+
 
           <!-- 材料登録 -->
           <section id="register" class="w-full max-w-2xl">
@@ -224,7 +203,7 @@
                       <input
                         id="price"
                         type="number"
-                        placeholder="値段 (円)"
+                        placeholder="値段"
                         class="form-input w-24"
                       />
                       <button type="button" class="delete-register-row text-red-400 hover:text-red-600 ml-1">
@@ -252,12 +231,13 @@
                 <table class="min-w-full whitespace-nowrap bg-white border rounded-xl">
                   <thead>
                     <tr class="bg-emerald-50">
-                      <th class="p-2 w-10"></th>
-                      <th class="p-2 w-32">日付 <button class="filter-toggle" data-filter="date">▼</button></th>
-                      <th class="p-2 w-36">店舗 <button class="filter-toggle" data-filter="shop">▼</button></th>
-                      <th class="p-2 w-40">材料名 <button class="filter-toggle" data-filter="name">▼</button></th>
-                      <th class="p-2 w-24">量(g) <button class="filter-toggle" data-filter="amount">▼</button></th>
-                      <th class="p-2 w-28">値段(円) <button class="filter-toggle" data-filter="price">▼</button></th>
+                      <th class="p-2 w-10">
+                        <input type="checkbox" id="select-all" class="form-checkbox text-emerald-500 rounded w-5 h-5">
+                      </th>
+                      <th class="p-2 w-32">日付</th>
+                      <th class="p-2 w-36">店舗</th>
+                      <th class="p-2 w-40">材料名</th>
+                      <th class="p-2 w-28">値段</th>
                       <th class="p-2 w-10"></th>
                     </tr>
                     <tr id="filter-row" class="hidden">
@@ -265,12 +245,6 @@
                       <th id="filter-date-cell" class="p-2"><input id="filter-date" type="date" class="form-input w-full" /></th>
                       <th id="filter-shop-cell" class="p-2"><input id="filter-shop" type="text" placeholder="店舗名" class="form-input w-full" /></th>
                       <th id="filter-name-cell" class="p-2"><input id="filter-name" type="text" placeholder="材料名" class="form-input w-full" /></th>
-                      <th id="filter-amount-cell" class="p-2">
-                        <div class="flex gap-1">
-                          <input id="filter-amount-min" type="number" placeholder="最小" class="form-input w-full" />
-                          <input id="filter-amount-max" type="number" placeholder="最大" class="form-input w-full" />
-                        </div>
-                      </th>
                       <th id="filter-price-cell" class="p-2">
                         <div class="flex gap-1">
                           <input id="filter-price-min" type="number" placeholder="最小" class="form-input w-full" />
@@ -283,8 +257,9 @@
                   <tbody id="materialList"></tbody>
                 </table>
               </div>
-              <div class="flex justify-center mt-8">
-                <button id="generateBtn" class="btn-primary w-full sm:w-1/2 mx-auto">献立を提案</button>
+              <div class="flex justify-between mt-8">
+                <button id="deleteSelectedBtn" class="btn-danger bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 text-sm">選択した材料を削除</button>
+                <button id="generateBtn" class="btn-primary bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 text-sm">献立を提案</button>
               </div>
             </div>
           </section>
@@ -352,8 +327,7 @@
                 うちめしAIに相談する
               </button>
 
-              <!-- 結果表示エリア -->
-              <div id="menuResult" class="bg-emerald-50 p-4 sm:p-6 rounded-xl"></div>
+              
             </div>
           </section>
 
