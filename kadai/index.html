@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>かんたん献立提案アプリ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+      .hidden {
+        display: none;
+      }
+      .loading-ticker-wrap {
+        height: 200px;
+        background: linear-gradient(90deg, 
+          rgba(255,255,255,0) 0%, 
+          rgba(255,255,255,0.2) 20%, 
+          rgba(255,255,255,1) 50%,
+          rgba(255,255,255,0.2) 80%,
+          rgba(255,255,255,0) 100%
+        );
+      }
+      
+      .loading-ticker {
+        animation: ticker 15s linear infinite;
+      }
+
+      .loading-ticker img {
+        width: 300px;
+        height: 200px;
+        object-fit: cover;
+        margin: 0 1rem;
+      }
+
+      @keyframes ticker {
+        0% {
+          transform: translateX(0);
+        }
+        100% {
+          transform: translateX(-200%);
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gradient-to-br from-green-50 to-gray-100 min-h-screen font-sans flex flex-col">
+    <!-- メニューボタン -->
+    <button id="menu-trigger" class="fixed right-4 z-50 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-transform duration-300 ease-in-out" style="top: 0.75rem;">
+      <svg class="w-6 h-6 text-gray-600 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </button>
+
+    <!-- サイドメニュー -->
+    <div id="side-menu" class="fixed top-0 right-0 w-64 h-full bg-white shadow-lg transform translate-x-full transition-transform duration-300 ease-in-out z-40">
+      <div class="h-full overflow-y-auto">
+        <div class="p-4">
+          <h2 class="text-lg font-bold text-gray-800 mb-4">メニュー</h2>
+          <nav class="space-y-2">
+            <!-- ダッシュボード -->
+            <a href="#" class="menu-item block px-3 py-2 rounded-lg hover:bg-emerald-50 text-gray-700 hover:text-emerald-600" data-target="dashboard">
+              <span class="inline-flex items-center">
+                <span class="mr-2">📊</span>ダッシュボード
+              </span>
+            </a>
+
+            <!-- 材料登録 -->
+            <div class="space-y-1">
+              <div class="px-3 py-2 text-sm font-medium text-gray-500">材料登録</div>
+              <a href="#" class="menu-item block px-6 py-2 rounded-lg hover:bg-emerald-50 text-gray-700 hover:text-emerald-600" data-target="ocr">
+                <span class="inline-flex items-center">
+                  <span class="mr-2">📷</span>自動取込（OCR風）
+                </span>
+              </a>
+              <a href="#" class="menu-item block px-6 py-2 rounded-lg hover:bg-emerald-50 text-gray-700 hover:text-emerald-600" data-target="register">
+                <span class="inline-flex items-center">
+                  <span class="mr-2">📝</span>手動登録
+                </span>
+              </a>
+            </div>
+
+            <!-- 材料管理 -->
+            <div class="space-y-1">
+              <div class="px-3 py-2 text-sm font-medium text-gray-500">材料管理</div>
+            <a href="#" class="menu-item block px-3 py-2 rounded-lg hover:bg-emerald-50 text-gray-700 hover:text-emerald-600" data-target="list">
+              <span class="inline-flex items-center">
+                <span class="mr-2">📋</span>材料一覧
+              </span>
+            </a>
+
+            <!-- 献立 -->
+            <div class="space-y-1">
+              <div class="px-3 py-2 text-sm font-medium text-gray-500">献立管理</div>
+              <a href="#" class="menu-item block px-6 py-2 rounded-lg hover:bg-emerald-50 text-gray-700 hover:text-emerald-600" data-target="menu">
+                <span class="inline-flex items-center">
+                  <span class="mr-2">🍽️</span>今日の献立
+                </span>
+              </a>
+    
+            </div>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- オーバーレイ -->
+    <div id="menu-overlay" class="fixed inset-0 bg-black opacity-0 pointer-events-none transition-opacity duration-300 ease-in-out z-30"></div>
+
+    <!-- メインコンテンツラッパー -->
+    <div id="main-wrapper" class="flex-1 transform transition-transform duration-300 ease-in-out flex flex-col min-h-screen">
+      <!-- ヘッダー -->
+      <header class="bg-gradient-to-r from-green-700 to-emerald-500 text-white shadow-lg">
+        <div class="relative w-full px-4 sm:px-6 lg:px-8 py-3">
+          <div class="flex items-center">
+            <a href="javascript:void(0)" id="refresh-logo" class="cursor-pointer absolute left-4">
+              <img src="../img/うちめしAI_ロゴ.png" alt="うちめしAI" class="h-12 w-auto">
+            </a>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-wide text-center w-full">うちめしAI</h1>
+          </div>
+        </div>
+      </header>
+
+      <!-- メインコンテンツ -->
+      <main class="flex-grow flex flex-col relative">
+        <!-- ローディング画面（mainの中に移動） -->
+        <div id="loading-screen" class="absolute inset-0 bg-gradient-to-br from-emerald-50 to-gray-100 z-50">
+          <div class="h-full flex items-center justify-center">
+            <div class="loading-spinner"></div>
+            <div class="loading-ticker-wrap w-full overflow-hidden">
+              <div class="loading-ticker flex">
+                <!-- JavaScriptで動的に画像を追加 -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex-1 h-full py-8 flex flex-col items-center justify-center">
+          <!-- 以下、既存のセクション -->
+        </div>
+      </main>
+
+      <!-- フッター -->
+      <footer class="bg-white/80 backdrop-blur-md py-4 sm:py-6 border-t border-emerald-100">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm sm:text-base text-emerald-700">
+          <p>&copy; 2024 うちめしAI All rights reserved.</p>
+        </div>
+      </footer>
+    </div>
+
+    <!-- スクリプト -->
+    <script src="js/script.js"></script>
+  </body>
+</html> 
